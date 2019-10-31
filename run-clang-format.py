@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """A wrapper script around clang-format, suitable for linting multiple files
 and to use for continuous integration.
 
@@ -22,6 +22,8 @@ import signal
 import subprocess
 import sys
 import traceback
+import subprocess
+import re
 
 from functools import partial
 
@@ -88,6 +90,37 @@ def list_files(files, recursive=False, extensions=None, exclude=None):
         else:
             out.append(file)
     return out
+
+def get_staged_files(extensions=None):
+    if extensions is None:
+        extensions = []
+    git_output = subprocess.run(
+        ['git', 'diff-index', '--cached', 'HEAD'],
+        stdout=subprocess.PIPE
+    ).stdout.decode('utf-8')   
+
+    modified_files = git_output.split('\n')
+    return extract_filename(modified_files, extensions)
+
+
+def extract_filename(git_output_lines, extensions):
+    regex_extensions = map(lambda ext: re.escape(ext), extensions)
+    extensions_regex = '|'.join(regex_extensions)
+    regex = '[MA]\t.*\.({})$'.format(extensions_regex)
+    valid_files = filter(
+        lambda item: 
+            re.search(
+                regex,
+                item
+            ) != None,
+        git_output_lines
+    )
+    return list(
+        map(
+            lambda item: item.split('\t')[-1],
+            valid_files
+        )
+    )
 
 
 def make_diff(file, original, reformatted):
@@ -251,8 +284,7 @@ def main():
         '-r',
         '--recursive',
         action='store_true',
-        help='run recursively over directories')
-    parser.add_argument('files', metavar='file', nargs='+')
+        help='run recursively over directories (valid only if file is specified)')
     parser.add_argument(
         '-q',
         '--quiet',
@@ -277,7 +309,14 @@ def main():
         action='append',
         default=[],
         help='exclude paths matching the given glob-like pattern(s)'
-        ' from recursive search')
+        ' from recursive search')    
+    parser.add_argument(
+        'files',
+        metavar='file',
+        nargs='*',
+        help='files and/or folders to analyse; if no filename is specified'
+        ' all staging files will be compared (but only those that match file extensions)'
+        )
 
     args = parser.parse_args()
 
@@ -322,12 +361,17 @@ def main():
     excludes = excludes_from_file(DEFAULT_CLANG_FORMAT_IGNORE)
     excludes.extend(args.exclude)
 
-    files = list_files(
-        args.files,
-        recursive=args.recursive,
-        exclude=excludes,
-        extensions=args.extensions.split(','))
-
+    files = []
+    if len(args.files) > 0:
+        files = list_files(
+            args.files,
+            recursive=args.recursive,
+            exclude=excludes,
+            extensions=args.extensions.split(','))
+    else:
+        files = get_staged_files(
+            extensions=args.extensions.split(',')
+        )        
     if not files:
         return
 
