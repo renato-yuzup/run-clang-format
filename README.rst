@@ -45,13 +45,6 @@ An example configuration is available in this repo::
   # ignore third_party code from clang-format checks
   src/third_party/*
 
-You can run against staged files in the current git repository
-by running this script without arguments::
-
-  ./run-clang-format.py
-
-You don't get all the flavors for recursivity and exclusion list, however.
-
 
 Continuous integration
 ======================
@@ -70,10 +63,9 @@ FAQ
 Can I check only changed files?
 -------------------------------
 
-No, and this is what this repository was initially about.
-However, once working around a few shortcommings of ``git clang-format``,
-I opted to try an alternative strategy
-which expects the whole project to be correctly formatted.
+Yes. You can run against staged files in the current git repository
+by running this script without arguments::
 
-It would make sense to support this feature as well,
-so that the coding style does not need to be enforced but merely suggested.
+  ./run-clang-format.py
+
+You don't get all the flavors for recursivity and exclusion list, however.
