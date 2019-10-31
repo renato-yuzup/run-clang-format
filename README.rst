@@ -45,6 +45,13 @@ An example configuration is available in this repo::
   # ignore third_party code from clang-format checks
   src/third_party/*
 
+You can run against staged files in the current git repository
+by running this script without arguments::
+
+  ./run-clang-format.py
+
+You don't get all the flavors for recursivity and exclusion list, however.
+
 
 Continuous integration
 ======================
